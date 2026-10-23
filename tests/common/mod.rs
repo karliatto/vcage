@@ -57,6 +57,9 @@ pub struct Env {
     pub home: PathBuf,
     pub bin: PathBuf,
     pub extra_env: Vec<(String, String)>,
+    /// PATH for vcage: the fake tools first, then the caller's PATH (the
+    /// fake scripts need coreutils, which is not in /usr/bin under Nix).
+    pub path: String,
 }
 
 pub fn find_tool(name: &str) -> PathBuf {
@@ -85,11 +88,17 @@ impl Env {
         for name in ["age", "age-keygen"] {
             std::os::unix::fs::symlink(find_tool(name), bin.join(name)).unwrap();
         }
+        let path = format!(
+            "{}:{}",
+            bin.display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
         Env {
             root,
             home,
             bin,
             extra_env: Vec::new(),
+            path,
         }
     }
 
@@ -143,7 +152,7 @@ impl Env {
         c.args(args)
             .env_clear()
             .env("HOME", &self.home)
-            .env("PATH", format!("{}:/usr/bin:/bin", self.bin.display()))
+            .env("PATH", &self.path)
             .env("FAKE_LOG", self.path("log"))
             .env("FAKE_STATE", self.path("state"))
             .env("FAKE_KEYCOPY", self.path("keycopy"))

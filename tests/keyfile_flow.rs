@@ -294,8 +294,10 @@ fn mount_with_overrides_only() {
 
 #[test]
 fn missing_veracrypt_mentions_nix() {
-    let env = Env::new();
+    let mut env = Env::new();
     fs::remove_file(env.bin.join("veracrypt")).unwrap();
+    // Only our bin dir, so a real veracrypt on the caller's PATH is not found.
+    env.path = env.bin.display().to_string();
     let out = env.run(&["list"]);
     assert_err(&out, "veracrypt");
     assert!(stderr(&out).contains("NIXPKGS_ALLOW_UNFREE=1"));
