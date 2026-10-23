@@ -9,6 +9,7 @@ use std::process::{Command, Stdio};
 use anyhow::{bail, Context, Result};
 
 use crate::bins::{self, Tool};
+use crate::cleanup;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mounted {
@@ -89,12 +90,11 @@ pub fn find_mounted<'a>(mounted: &'a [Mounted], volume: &Path) -> Option<&'a Mou
 }
 
 fn run_interactive(mut cmd: Command, what: &str) -> Result<()> {
-    let status = cmd
-        .stdin(Stdio::inherit())
+    cmd.stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .with_context(|| format!("starting {what}"))?;
+        .stderr(Stdio::inherit());
+    // Registered so a signal terminates VeraCrypt (and sudo relays it).
+    let status = cleanup::run(&mut cmd).with_context(|| format!("running {what}"))?;
     if !status.success() {
         bail!("{what} failed ({status})");
     }
