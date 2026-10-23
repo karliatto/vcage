@@ -1,0 +1,25 @@
+[package]
+name = "vcage"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "VeraCrypt volumes unlocked with a Trezor-backed age keyfile"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+getrandom = "0.3"
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+signal-hook = "0.3"
+thiserror = "2"
+toml = "0.8"
+zeroize = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+# The keyfile guard relies on destructors running during a panic.
+panic = "unwind"
