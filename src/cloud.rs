@@ -16,13 +16,15 @@ const SYNC_DIR_NAMES: &[(&str, &str)] = &[
     ("syncthing", "Syncthing"),
 ];
 
-/// Marker files that sync clients leave in the root of a synced folder.
-const MARKERS: &[(&str, &str)] = &[
-    (".stfolder", "Syncthing"),
-    (".dropbox", "Dropbox"),
-    (".dropbox.cache", "Dropbox"),
-    (".nextcloudsync.log", "Nextcloud"),
-    (".owncloudsync.log", "ownCloud"),
+/// Marker files that sync clients leave in the root of a synced folder, and
+/// whether the marker must be a regular file. `~/.dropbox` is the Dropbox
+/// client's config *directory*, so only a `.dropbox` file marks a synced root.
+const MARKERS: &[(&str, &str, bool)] = &[
+    (".stfolder", "Syncthing", false),
+    (".dropbox", "Dropbox", true),
+    (".dropbox.cache", "Dropbox", false),
+    (".nextcloudsync.log", "Nextcloud", false),
+    (".owncloudsync.log", "ownCloud", false),
 ];
 
 /// Returns the name of the sync service `path` appears to be inside, if any.
@@ -52,8 +54,10 @@ pub fn detect(path: &Path, home: &Path, extra: &[PathBuf]) -> Option<String> {
         }
     }
     for dir in real.ancestors() {
-        for (m, service) in MARKERS {
-            if dir.join(m).exists() {
+        for (m, service, file_only) in MARKERS {
+            let p = dir.join(m);
+            let found = if *file_only { p.is_file() } else { p.exists() };
+            if found {
                 return Some((*service).to_string());
             }
         }
@@ -144,5 +148,23 @@ mod tests {
         let link = t.path().join("link");
         std::os::unix::fs::symlink(&shared, &link).unwrap();
         assert!(detect(&link.join("mnt"), home, &[]).is_some());
+    }
+
+    #[test]
+    fn dropbox_config_dir_is_not_a_marker() {
+        let t = tempfile::tempdir().unwrap();
+        let home = t.path();
+        // The Dropbox client keeps its config in ~/.dropbox (a directory).
+        std::fs::create_dir_all(home.join(".dropbox")).unwrap();
+        std::fs::create_dir_all(home.join("vc")).unwrap();
+        assert_eq!(detect(&home.join("vc/personal"), home, &[]), None);
+        // The synced folder's root has a .dropbox *file*.
+        let synced = home.join("Box");
+        std::fs::create_dir_all(&synced).unwrap();
+        std::fs::write(synced.join(".dropbox"), "{}").unwrap();
+        assert_eq!(
+            detect(&synced.join("vc"), home, &[]).as_deref(),
+            Some("Dropbox")
+        );
     }
 }
