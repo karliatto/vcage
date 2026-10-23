@@ -38,6 +38,23 @@ packages past nixpkgs' gates:
   flake you need `NIXPKGS_ALLOW_INSECURE=1` or
   `permittedInsecurePackages = [ "python3.XX-ecdsa-..." ]`.
 
+To get just the three tools from nixpkgs, without the flake (for example to
+use a `cargo install`ed vcage), allow both gates for one command:
+
+```sh
+# a shell with age, age-plugin-trezor and veracrypt on PATH
+NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_INSECURE=1 \
+  nix shell --impure nixpkgs#age nixpkgs#trezor-agent nixpkgs#veracrypt
+
+# or install them into your profile
+NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_INSECURE=1 \
+  nix profile install --impure nixpkgs#age nixpkgs#trezor-agent nixpkgs#veracrypt
+```
+
+`NIXPKGS_ALLOW_INSECURE=1` allows *every* insecure package in that command,
+not only python-ecdsa. From a checkout, `nix develop` gives the same tools
+(plus a Rust toolchain) with only those two packages allowed.
+
 On NixOS, add the package to `environment.systemPackages` via the flake's
 `packages.<system>.default`. `sudo` is taken from the system (NixOS:
 `/run/wrappers/bin/sudo`) and is deliberately not bundled.
@@ -52,7 +69,7 @@ cargo install --path .
 ```
 
 Then install `age`, `trezor-agent` (provides `age-plugin-trezor`) and
-`veracrypt` yourself. vcage looks them up on `PATH` and tells you which Nix
+`veracrypt` yourself (see the `nix shell` command above). vcage looks them up on `PATH` and tells you which Nix
 package to install when one is missing.
 
 ## First-time setup
